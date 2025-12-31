@@ -1,0 +1,23 @@
+@host = http://localhost:3000
+
+### BOARD
+GET {{host}}/api/board
+
+### CREATE TASK (ord = MAX+1 in column)
+POST {{host}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Nowe zadanie",
+  "col_id": 1
+}
+
+### MOVE TASK (transakcyjnie przelicza ord)
+# Uzupełnij ID istniejącego zadania
+POST {{host}}/api/tasks/1/move
+Content-Type: application/json
+
+{
+  "col_id": 2,
+  "ord": 1
+}

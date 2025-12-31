@@ -1,0 +1,15 @@
+
+### BOARD
+GET http://localhost:3000/api/board
+
+### CREATE TASK
+POST http://localhost:3000/api/tasks
+Content-Type: application/json
+
+{ "title": "Nowe zadanie", "col_id": 1 }
+
+### MOVE TASK
+POST http://localhost:3000/api/tasks/1/move
+Content-Type: application/json
+
+{ "col_id": 2, "ord": 1 }
