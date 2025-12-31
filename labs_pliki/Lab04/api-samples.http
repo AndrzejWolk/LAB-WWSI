@@ -1,0 +1,18 @@
+
+### MOVIES
+GET http://localhost:3000/api/movies
+
+GET http://localhost:3000/api/movies?year=2014
+
+GET http://localhost:3000/api/movies/top?limit=3
+
+POST http://localhost:3000/api/movies
+Content-Type: application/json
+
+{ "title": "Dune: Part Two", "year": 2024 }
+
+### RATINGS
+POST http://localhost:3000/api/ratings
+Content-Type: application/json
+
+{ "movie_id": 1, "score": 5 }
