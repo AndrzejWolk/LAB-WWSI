@@ -1,0 +1,14 @@
+body{font-family:system-ui,Segoe UI,Arial,sans-serif;margin:2rem}
+header{margin-bottom:1.2rem}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:2rem}
+ul.notes{list-style:none;padding:0}
+ul.notes li{border:1px solid #ddd;padding:1rem;margin:.6rem 0;background:#fff;border-radius:8px}
+.meta{color:#666;font-size:.9rem;margin-bottom:.4rem}
+.tag{display:inline-block;background:#eef;border:1px solid #dde;padding:.1rem .4rem;margin-right:.3rem;border-radius:6px}
+mark{background: #fff59d}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ddd;padding:.5rem}
+th{background:#f0f0f0}
+button{padding:.3rem .7rem}
+label{margin-right:.6rem}
+form{margin:.4rem 0}
