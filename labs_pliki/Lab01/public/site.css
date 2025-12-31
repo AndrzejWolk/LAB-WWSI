@@ -1,0 +1,9 @@
+body{font-family:system-ui,Segoe UI,Arial,sans-serif;margin:2rem}
+header{margin-bottom:1.2rem}
+nav a{margin-right:1rem}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ddd;padding:.5rem}
+th{background:#f0f0f0}
+button{padding:.3rem .7rem}
+label{margin-right:.6rem}
+form{margin:.4rem 0}
