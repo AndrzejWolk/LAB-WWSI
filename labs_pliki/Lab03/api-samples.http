@@ -1,0 +1,19 @@
+
+### POSTS
+GET http://localhost:3000/api/posts
+
+POST http://localhost:3000/api/posts
+Content-Type: application/json
+
+{ "title": "Nowy post", "body": "Treść posta" }
+
+### COMMENTS (approved only)
+GET http://localhost:3000/api/posts/1/comments
+
+POST http://localhost:3000/api/posts/1/comments
+Content-Type: application/json
+
+{ "author": "Ala", "body": "To mój komentarz, jeszcze niezatwierdzony." }
+
+### APPROVE
+POST http://localhost:3000/api/comments/1/approve

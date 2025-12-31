@@ -1,0 +1,12 @@
+sudo apt update && sudo apt -y upgrade
+sudo apt -y install git curl build-essential python3 sqlite3
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt -y install nodejs
+node -v
+npm -v
+git clone https://github.com/marcinpytlik/WWSI_TechnologieInternetowe.git
+cd WWSI_TechnologieInternetowe/labs/Lab02
+npm ci
+npm run reset:db
+npm run dev
+http://localhost:3000

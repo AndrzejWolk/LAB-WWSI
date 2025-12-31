@@ -1,0 +1,34 @@
+@host = http://localhost:3000
+
+### POSTS ----------------------------------------------------------------
+
+### GET posts
+GET {{host}}/api/posts
+
+### POST post (201 Created + Location)
+POST {{host}}/api/posts
+Content-Type: application/json
+
+{
+  "title": "Nowy post",
+  "body": "Treść posta"
+}
+
+### COMMENTS (approved only) --------------------------------------------
+
+### GET public comments for post 1
+GET {{host}}/api/posts/1/comments
+
+### POST comment (goes to moderation; returns approved:0)
+POST {{host}}/api/posts/1/comments
+Content-Type: application/json
+
+{
+  "author": "Ala",
+  "body": "To mój komentarz, jeszcze niezatwierdzony."
+}
+
+### APPROVE --------------------------------------------------------------
+
+### Approve comment (replace {id} with the returned comment id)
+POST {{host}}/api/comments/1/approve
