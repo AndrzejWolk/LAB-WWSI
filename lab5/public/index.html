@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kanban Board</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Kanban Board</h1>
+
+  <section id="addTask">
+    <h2>Dodaj Zadanie</h2>
+    <form id="addTaskForm">
+      <input type="text" id="taskTitle" placeholder="Tytuł zadania" required />
+      <select id="taskColumn"></select>
+      <button type="submit">Dodaj</button>
+    </form>
+  </section>
+
+  <section id="board">
+    <div id="columns"></div>
+  </section>
+
+  <script>
+    const apiBase = '/api';
+
+    async function fetchData(endpoint) {
+      const res = await fetch(apiBase + endpoint);
+      return res.json();
+    }
+
+    async function postData(endpoint, data) {
+      const res = await fetch(apiBase + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    }
+
+    async function loadBoard() {
+      try {
+        const { cols, tasks } = await fetchData('/board');
+        const columnsDiv = document.getElementById('columns');
+        const taskColumnSelect = document.getElementById('taskColumn');
+
+        columnsDiv.innerHTML = '';
+        taskColumnSelect.innerHTML = '';
+
+        cols.forEach(col => {
+          taskColumnSelect.innerHTML += `<option value="${col.Id}">${col.Name}</option>`;
+
+          const colDiv = document.createElement('div');
+          colDiv.className = 'column';
+          colDiv.innerHTML = `<h3>${col.Name}</h3>`;
+
+          const tasksInCol = tasks.filter(t => t.ColId === col.Id).sort((a, b) => a.Ord - b.Ord);
+          tasksInCol.forEach(task => {
+            const taskDiv = document.createElement('div');
+            taskDiv.className = 'task';
+
+            taskDiv.innerHTML = `
+              <span>${task.Title}</span>
+              <div class="task-actions">
+                ${col.Ord > 1 ? `<button onclick="moveTask(${task.Id}, ${col.Id - 1})">←</button>` : ''}
+                ${col.Ord < cols.length ? `<button onclick="moveTask(${task.Id}, ${col.Id + 1})">→</button>` : ''}
+              </div>
+            `;
+
+            colDiv.appendChild(taskDiv);
+          });
+
+          columnsDiv.appendChild(colDiv);
+        });
+      } catch (error) {
+        alert('Błąd ładowania tablicy: ' + error.message);
+      }
+    }
+
+    document.getElementById('addTaskForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const titleInput = document.getElementById('taskTitle');
+      const colSelect = document.getElementById('taskColumn');
+
+      const title = titleInput.value.trim();
+      const col_id = parseInt(colSelect.value);
+
+      if (!title) {
+        alert('Podaj tytuł zadania');
+        return;
+      }
+      if (isNaN(col_id)) {
+        alert('Wybierz kolumnę');
+        return;
+      }
+
+      try {
+        await postData('/tasks', { title, col_id });
+
+        titleInput.value = '';
+        loadBoard();
+      } catch (error) {
+        alert('Błąd dodawania zadania: ' + error.message);
+      }
+    });
+
+    async function moveTask(taskId, targetColId) {
+      try {
+        const board = await fetchData('/board');
+        const tasksInCol = board.tasks.filter(t => t.ColId === targetColId);
+        const maxOrd = tasksInCol.length ? Math.max(...tasksInCol.map(t => t.Ord)) : 0;
+        const newOrd = maxOrd + 1;
+
+        await postData(`/tasks/${taskId}/move`, { col_id: targetColId, ord: newOrd });
+        loadBoard();
+      } catch (error) {
+        alert('Błąd przenoszenia zadania: ' + error.message);
+      }
+    }
+
+    loadBoard();
+  </script>
+</body>
+</html>

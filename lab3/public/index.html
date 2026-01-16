@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Blog z Moderacją Komentarzy</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; max-width: 900px; }
+    header { text-align: center; margin-bottom: 30px; }
+    h2 { color: #007bff; }
+    section { margin-bottom: 40px; }
+    .post { border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+    .comment { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    input, textarea { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+    button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    .hidden { display: none; }
+    .moderation-comment { background: #ffeebb; }
+    #moderationPanel { border: 1px solid #007bff; padding: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <header><h1>Blog z Moderacją Komentarzy</h1></header>
+
+  <section id="postsSection">
+    <h2>Wszystkie wpisy</h2>
+    <div id="postsList"></div>
+  </section>
+
+  <section id="addPostSection">
+    <h2>Dodaj Nowy Post</h2>
+    <form id="addPostForm">
+      <input type="text" id="postTitle" placeholder="Tytuł posta" required>
+      <textarea id="postBody" placeholder="Treść posta" rows="6" required></textarea>
+      <button type="submit">Dodaj Post</button>
+    </form>
+  </section>
+
+  <section id="postDetailsSection" class="hidden">
+    <button onclick="openPostsList()">← Wróć do listy postów</button>
+    <h2 id="postTitle"></h2>
+    <p id="postBody"></p>
+    <small id="postCreatedAt"></small>
+    <h3>Komentarze</h3>
+    <div id="commentsList"></div>
+
+    <h4>Dodaj komentarz</h4>
+    <form id="commentForm">
+      <input type="text" id="commentAuthor" placeholder="Twoje imię" required>
+      <textarea id="commentBody" placeholder="Twoja opinia" rows="4" required></textarea>
+      <button type="submit">Wyślij komentarz (trafia do moderacji)</button>
+    </form>
+  </section>
+
+  <section id="moderationSection">
+    <h2>Panel Moderatora</h2>
+    <div id="moderationPanel">Ładowanie komentarzy do zatwierdzenia...</div>
+  </section>
+
+  <script>
+    const apiBase = 'http://localhost:3002/api';
+
+    async function fetchData(endpoint) {
+      const res = await fetch(apiBase + endpoint);
+      return res.json();
+    }
+
+    async function postData(endpoint, data) {
+      const res = await fetch(apiBase + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    }
+
+    async function loadPosts() {
+      document.getElementById('postsSection').classList.remove('hidden');
+      document.getElementById('postDetailsSection').classList.add('hidden');
+      try {
+        const posts = await fetchData('/posts');
+        const postsList = document.getElementById('postsList');
+        postsList.innerHTML = '';
+        posts.forEach(post => {
+          postsList.innerHTML += `<div class="post"><h3>${post.Title}</h3><p>${post.Body.slice(0, 150)}...</p><button onclick="showPostDetails(${post.Id})">Komentarze</button></div>`;
+        });
+      } catch (err) {
+        alert('Błąd ładowania postów: ' + err.message);
+      }
+    }
+
+    async function showPostDetails(postId) {
+      document.getElementById('postsSection').classList.add('hidden');
+      document.getElementById('postDetailsSection').classList.remove('hidden');
+      try {
+        const [postRes, commentsRes] = await Promise.all([
+          fetch(apiBase + '/posts'),
+          fetch(apiBase + `/posts/${postId}/comments`)
+        ]);
+        const posts = await postRes.json();
+        const post = posts.find(p => p.Id === postId);
+        if (!post) throw new Error('Post nie znaleziony');
+
+        const comments = await commentsRes.json();
+
+        document.getElementById('postTitle').textContent = post.Title;
+        document.getElementById('postBody').textContent = post.Body;
+        document.getElementById('postCreatedAt').textContent = new Date(post.CreatedAt).toLocaleString();
+
+        const commentsList = document.getElementById('commentsList');
+        commentsList.innerHTML = '';
+        if (comments.length === 0) commentsList.textContent = 'Brak komentarzy zatwierdzonych.';
+        else {
+          comments.forEach(c => {
+            commentsList.innerHTML += `<div class="comment"><strong>${c.Author}</strong> <small>${new Date(c.CreatedAt).toLocaleString()}</small><p>${c.Body}</p></div>`;
+          });
+        }
+        currentPostId = postId;
+      } catch (err) {
+        alert('Błąd ładowania szczegółów posta: ' + err.message);
+      }
+    }
+
+    function openPostsList() {
+      document.getElementById('postsSection').classList.remove('hidden');
+      document.getElementById('postDetailsSection').classList.add('hidden');
+    }
+
+    let currentPostId = null;
+    document.getElementById('commentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const author = document.getElementById('commentAuthor').value.trim();
+      const body = document.getElementById('commentBody').value.trim();
+      if (!author || !body) {
+        alert('Uzupełnij pola');
+        return;
+      }
+      try {
+        const res = await postData(`/posts/${currentPostId}/comments`, { author, body });
+        if (res.error) {
+          alert('Błąd dodania: ' + res.error);
+        } else {
+          alert('Komentarz dodany i oczekuje na zatwierdzenie.');
+          document.getElementById('commentForm').reset();
+        }
+      } catch (err) {
+        alert('Błąd dodania komentarza');
+      }
+    });
+
+    document.getElementById('addPostForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('postTitle').value.trim();
+      const body = document.getElementById('postBody').value.trim();
+      if (!title || !body) {
+        alert('Uzupełnij tytuł i treść');
+        return;
+      }
+      try {
+        const res = await postData('/posts', { title, body });
+        if (res.error) {
+          alert('Błąd dodania: ' + res.error);
+        } else {
+          alert('Post dodany!');
+          document.getElementById('addPostForm').reset();
+          loadPosts();
+        }
+      } catch (err) {
+        alert('Błąd dodania posta');
+      }
+    });
+
+    async function loadModeration() {
+      try {
+        const comments = await fetchData('/comments/pending');
+        const panel = document.getElementById('moderationPanel');
+        panel.innerHTML = '';
+        if (comments.length === 0) {
+          panel.textContent = 'Brak komentarzy do zatwierdzenia.';
+          return;
+        }
+        comments.forEach(c => {
+          panel.innerHTML += `<div class="comment moderation-comment"><strong>Do posta: ${c.PostTitle}</strong><br><strong>${c.Author}</strong> <small>${new Date(c.CreatedAt).toLocaleString()}</small><p>${c.Body}</p><button onclick="approveComment(${c.Id})">Zatwierdź</button></div>`;
+        });
+      } catch (err) {
+        document.getElementById('moderationPanel').textContent = 'Błąd ładowania komentarzy.';
+      }
+    }
+
+    async function approveComment(commentId) {
+      try {
+        const res = await fetch(apiBase + `/comments/${commentId}/approve`, { method: 'POST' });
+        if (!res.ok) throw new Error('Błąd zatwierdzania komentarza');
+        alert('Komentarz zatwierdzony.');
+        loadModeration();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    loadPosts();
+    loadModeration();
+  </script>
+</body>
+</html>

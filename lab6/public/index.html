@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Notatki</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Notatki</h1>
+
+  <section id="addNote">
+    <h2>Dodaj Notatkę</h2>
+    <form id="addNoteForm">
+      <input type="text" id="noteTitle" placeholder="Tytuł notatki" required />
+      <textarea id="noteBody" placeholder="Treść notatki" rows="6" required></textarea>
+      <button type="submit">Dodaj</button>
+    </form>
+  </section>
+
+  <section id="notesListSection">
+    <h2>Lista notatek</h2>
+    <div id="notesList"></div>
+  </section>
+
+  <script>
+    const apiBase = '/api';
+
+    async function fetchData(endpoint) {
+      const res = await fetch(apiBase + endpoint);
+      return res.json();
+    }
+
+    async function postData(endpoint, data) {
+      const res = await fetch(apiBase + endpoint, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    }
+
+    async function loadNotes() {
+      try {
+        const notes = await fetchData('/notes');
+        const notesList = document.getElementById("notesList");
+        notesList.innerHTML = "";
+        if (notes.length === 0) notesList.innerHTML = "<p>Brak notatek.</p>";
+        notes.forEach(note => {
+          const created = new Date(note.CreatedAt).toLocaleString();
+          notesList.innerHTML += `
+            <div class="note">
+              <h3>${note.Title}</h3>
+              <small>Dodano: ${created}</small>
+              <p>${note.Body}</p>
+            </div>
+          `;
+        });
+      } catch (e) {
+        alert("Błąd ładowania notatek: " + e.message);
+      }
+    }
+
+    document.getElementById("addNoteForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const title = document.getElementById("noteTitle").value.trim();
+      const body = document.getElementById("noteBody").value.trim();
+      if (!title || !body) {
+        alert("Wypełnij tytuł i treść");
+        return;
+      }
+      try {
+        const res = await postData('/notes', { title, body });
+        if (res.error) {
+          alert("Błąd dodania notatki: " + res.error);
+        } else {
+          alert("Notatka dodana!");
+          document.getElementById("addNoteForm").reset();
+          loadNotes();
+        }
+      } catch (e) {
+        alert("Błąd dodawania notatki: " + e.message);
+      }
+    });
+
+    loadNotes();
+  </script>
+</body>
+</html>

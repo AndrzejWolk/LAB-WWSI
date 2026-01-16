@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Sklep Online</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Sklep Online</h1>
+  </header>
+
+  <section id="products">
+    <h2>Dostępne Produkty</h2>
+    <div id="productsList" class="product-grid"></div>
+  </section>
+
+  <section id="add-product">
+    <h2>Dodaj Nowy Produkt</h2>
+    <form id="addProductForm">
+      <input type="text" id="productName" placeholder="Nazwa produktu" required>
+      <input type="number" id="productPrice" placeholder="Cena (PLN)" step="0.01" min="0" required>
+      <button type="submit">Dodaj Produkt</button>
+    </form>
+  </section>
+
+  <section id="cart">
+    <h2>Koszyk</h2>
+    <div id="cartList"></div>
+    <div id="cartTotal">Suma: 0.00 PLN</div>
+    <button id="checkoutBtn">Zamów</button>
+  </section>
+
+  <script>
+    const API_BASE = '/api';
+
+    async function fetchData(endpoint) {
+      const res = await fetch(API_BASE + endpoint);
+      return res.json();
+    }
+
+    async function postData(endpoint, data) {
+      const res = await fetch(API_BASE + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    }
+
+    async function loadProducts() {
+      try {
+        const products = await fetchData('/products');
+        const list = document.getElementById('productsList');
+        list.innerHTML = '';
+        products.forEach(p => {
+          list.innerHTML += `
+            <div class="product-card">
+              <h3>${p.Name}</h3>
+              <p>Cena: ${p.Price} PLN</p>
+              <button onclick="addToCart(${p.Id})">Dodaj do koszyka</button>
+            </div>
+          `;
+        });
+      } catch (err) {
+        console.error('Błąd ładowania produktów:', err);
+      }
+    }
+
+    async function loadCart() {
+      try {
+        const cart = await fetchData('/cart');
+        const list = document.getElementById('cartList');
+        const totalEl = document.getElementById('cartTotal');
+        list.innerHTML = '';
+        let total = 0;
+        cart.forEach(item => {
+          const itemTotal = item.price * item.qty;
+          total += itemTotal;
+          list.innerHTML += `
+            <div class="cart-item">
+              <span>${item.name} - ${item.price} PLN x 
+                <input type="number" value="${item.qty}" min="1" onchange="updateQty(${item.product_id}, this.value)">
+              </span>
+              <span>${itemTotal.toFixed(2)} PLN</span>
+              <button onclick="removeFromCart(${item.product_id})">Usuń</button>
+            </div>
+          `;
+        });
+        totalEl.textContent = `Suma: ${total.toFixed(2)} PLN`;
+      } catch (err) {
+        console.error('Błąd ładowania koszyka:', err);
+      }
+    }
+
+    document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('productName').value;
+      const price = parseFloat(document.getElementById('productPrice').value);
+      if (!name || isNaN(price) || price < 0) {
+        alert('Wprowadź prawidłową nazwę i cenę >= 0');
+        return;
+      }
+      try {
+        const res = await postData('/products', { name, price });
+        if (res.error) {
+          alert('Błąd dodania: ' + res.error);
+        } else {
+          alert('Produkt dodany!');
+          loadProducts();
+        }
+      } catch (err) {
+        alert('Błąd dodania produktu');
+      }
+    });
+
+    async function addToCart(productId) {
+      await postData('/cart/add', { product_id: productId, qty: 1 });
+      loadCart();
+    }
+
+    async function updateQty(productId, qty) {
+      await fetch(API_BASE + '/cart/item', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: parseInt(productId), qty: parseInt(qty) })
+      });
+      loadCart();
+    }
+
+    async function removeFromCart(productId) {
+      await fetch(API_BASE + `/cart/item/${productId}`, { method: 'DELETE' });
+      loadCart();
+    }
+
+    document.getElementById('checkoutBtn').addEventListener('click', async () => {
+      const res = await fetch(API_BASE + '/checkout', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Zamówienie ${data.order_id} zostało złożone! Suma: ${data.total} PLN`);
+        loadCart();
+      } else {
+        alert(data.error);
+      }
+    });
+
+    loadProducts();
+    loadCart();
+  </script>
+</body>
+</html>

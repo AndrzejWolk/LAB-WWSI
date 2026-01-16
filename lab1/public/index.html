@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Wypożyczalnia Książek</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Wypożyczalnia Książek</h1>
+
+  <!-- Członkowie -->
+  <h2>Członkowie</h2>
+  <form id="addMemberForm">
+    <input type="text" id="memberName" placeholder="Imię" required>
+    <input type="email" id="memberEmail" placeholder="Email" required>
+    <button type="submit">Dodaj Członka</button>
+  </form>
+  <ul id="membersList"></ul>
+
+  <!-- Książki -->
+  <h2>Książki</h2>
+  <form id="addBookForm">
+    <input type="text" id="bookTitle" placeholder="Tytuł" required>
+    <input type="text" id="bookAuthor" placeholder="Autor" required>
+    <input type="number" id="bookCopies" placeholder="Kopie" min="1" value="1">
+    <button type="submit">Dodaj Książkę</button>
+  </form>
+  <ul id="booksList"></ul>
+
+  <!-- Wypożyczenia -->
+  <h2>Wypożyczenia</h2>
+  <form id="borrowForm">
+    <select id="borrowMember"></select>
+    <select id="borrowBook"></select>
+    <input type="number" id="borrowDays" placeholder="Dni" value="14">
+    <button type="submit">Wypożycz</button>
+  </form>
+  <ul id="loansList"></ul>
+
+  <script>
+    const API_BASE = '/api';
+
+    // Funkcje pomocnicze
+    async function fetchData(endpoint) {
+      const res = await fetch(API_BASE + endpoint);
+      return res.json();
+    }
+
+    async function postData(endpoint, data) {
+      const res = await fetch(API_BASE + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    }
+
+    // Ładowanie danych
+    async function loadMembers() {
+      const members = await fetchData('/members');
+      const list = document.getElementById('membersList');
+      const select = document.getElementById('borrowMember');
+      list.innerHTML = '';
+      select.innerHTML = '<option value="">Wybierz członka</option>';
+      members.forEach(m => {
+        list.innerHTML += `<li>${m.Name} (${m.Email})</li>`;
+        select.innerHTML += `<option value="${m.Id}">${m.Name}</option>`;
+      });
+    }
+
+    async function loadBooks() {
+      const books = await fetchData('/books');
+      const list = document.getElementById('booksList');
+      const select = document.getElementById('borrowBook');
+      list.innerHTML = '';
+      select.innerHTML = '<option value="">Wybierz książkę</option>';
+      books.forEach(b => {
+        list.innerHTML += `<li>${b.Title} by ${b.Author} (Dostępne: ${b.Available})</li>`;
+        select.innerHTML += `<option value="${b.Id}">${b.Title}</option>`;
+      });
+    }
+
+    async function loadLoans() {
+      const loans = await fetchData('/loans');
+      const list = document.getElementById('loansList');
+      list.innerHTML = '';
+      loans.forEach(l => {
+        const status = l.ReturnDate ? 'Zwrócona' : 'Aktywna';
+        list.innerHTML += `<li>${l.MemberName} - ${l.BookTitle} (${status}) <button onclick="returnLoan(${l.Id})">Zwróć</button></li>`;
+      });
+    }
+
+    // Obsługa formularzy
+    document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('memberName').value,
+        email: document.getElementById('memberEmail').value
+      };
+      await postData('/members', data);
+      loadMembers();
+    });
+
+    document.getElementById('addBookForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        title: document.getElementById('bookTitle').value,
+        author: document.getElementById('bookAuthor').value,
+        copies: parseInt(document.getElementById('bookCopies').value)
+      };
+      await postData('/books', data);
+      loadBooks();
+    });
+
+    document.getElementById('borrowForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        member_id: parseInt(document.getElementById('borrowMember').value),
+        book_id: parseInt(document.getElementById('borrowBook').value),
+        days: parseInt(document.getElementById('borrowDays').value)
+      };
+      const res = await fetch(API_BASE + '/loans/borrow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.status === 409) alert('Brak dostępnych kopii!');
+      else loadLoans();
+      loadBooks(); // Odśwież dostępność
+    });
+
+    async function returnLoan(loanId) {
+      await postData('/loans/return', { loan_id: loanId });
+      loadLoans();
+      loadBooks();
+    }
+
+    // Inicjalizacja
+    loadMembers();
+    loadBooks();
+    loadLoans();
+  </script>
+</body>
+</html>

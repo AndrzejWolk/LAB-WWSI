@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Ranking Filmów</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Ranking Filmów</h1>
+
+  <section id="filters">
+    <label>Rok: <input type="number" id="yearFilter" placeholder="np. 2010"></label>
+    <label>Limit: <input type="number" id="limitFilter" placeholder="np. 5"></label>
+    <button onclick="loadMovies()">Filtruj</button>
+  </section>
+
+  <section id="movies">
+    <h2>Filmy</h2>
+    <div id="moviesList"></div>
+  </section>
+
+  <section id="addMovie">
+    <h2>Dodaj Film</h2>
+    <form id="addMovieForm">
+      <input type="text" id="movieTitle" placeholder="Tytuł" required>
+      <input type="number" id="movieYear" placeholder="Rok" required>
+      <button type="submit">Dodaj Film</button>
+    </form>
+  </section>
+
+  <section id="rateMovie">
+    <h2>Oceń Film</h2>
+    <select id="movieSelect"></select>
+    <select id="scoreSelect">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+    <button onclick="rateMovie()">Oceń</button>
+  </section>
+
+  <script>
+    const apiBase = 'http://localhost:3003/api';
+
+    async function fetchData(endpoint) {
+      const res = await fetch(apiBase + endpoint);
+      return res.json();
+    }
+
+    async function postData(endpoint, data) {
+      const res = await fetch(apiBase + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    }
+
+    async function loadMovies() {
+      const year = document.getElementById('yearFilter').value;
+      const limit = document.getElementById('limitFilter').value;
+      let url = '/movies';
+      const params = [];
+      if (year) params.push(`year=${year}`);
+      if (limit) params.push(`limit=${limit}`);
+      if (params.length) url += '?' + params.join('&');
+      try {
+        const movies = await fetchData(url);
+        const list = document.getElementById('moviesList');
+        list.innerHTML = '';
+        movies.forEach(m => {
+          list.innerHTML += `<div class="movie"><h3>${m.Title} (${m.Year})</h3><p>Średnia: ${m.AvgScore || 0} | Głosy: ${m.Votes}</p></div>`;
+        });
+        loadMovieSelect(movies);
+      } catch (err) {
+        alert('Błąd ładowania filmów: ' + err.message);
+      }
+    }
+
+    function loadMovieSelect(movies) {
+      const select = document.getElementById('movieSelect');
+      select.innerHTML = '<option value="">Wybierz film</option>';
+      movies.forEach(m => {
+        select.innerHTML += `<option value="${m.Id}">${m.Title}</option>`;
+      });
+    }
+
+    document.getElementById('addMovieForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('movieTitle').value;
+      const year = parseInt(document.getElementById('movieYear').value);
+      try {
+        await postData('/movies', { title, year });
+        alert('Film dodany!');
+        loadMovies();
+      } catch (err) {
+        alert('Błąd dodania filmu');
+      }
+    });
+
+    async function rateMovie() {
+      const movieId = document.getElementById('movieSelect').value;
+      const score = document.getElementById('scoreSelect').value;
+      if (!movieId || !score) {
+        alert('Wybierz film i ocenę');
+        return;
+      }
+      try {
+        await postData('/ratings', { movie_id: parseInt(movieId), score: parseInt(score) });
+        alert('Ocena dodana!');
+        loadMovies();
+      } catch (err) {
+        alert('Błąd dodania oceny');
+      }
+    }
+
+    loadMovies();
+  </script>
+</body>
+</html>
